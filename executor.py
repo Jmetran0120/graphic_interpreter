@@ -34,10 +34,10 @@ class DrawingExecutor:
         self.width = width
         self.height = height
         self.current_color = '#000000'  # Default: black
-        self.pen_x = width // 2  # Start at center
+        self.pen_x = width // 2  # Start pen position at center of canvas
         self.pen_y = height // 2
-        self.pen_down = True  # Pen starts down
-        self.fill_mode = False
+        self.pen_down = True  # Pen starts down (drawing mode enabled)
+        self.fill_mode = False  # Shapes are drawn as outlines by default
     
     def get_color(self, color_name: str) -> str:
         """Convert color name to hex color code"""
@@ -75,10 +75,10 @@ class DrawingExecutor:
         x2 = int(params.get('x2', 0))
         y2 = int(params.get('y2', 0))
         
-        # Draw the line
+        # Draw the line on canvas with current color
         self.canvas.create_line(x1, y1, x2, y2, fill=self.current_color, width=2)
         
-        # Update pen position
+        # Update pen position to end of line if pen is down
         if self.pen_down:
             self.pen_x = x2
             self.pen_y = y2
@@ -91,19 +91,19 @@ class DrawingExecutor:
         y = int(params.get('y', 0))
         radius = int(params.get('radius', 10))
         
-        # Calculate bounding box for oval
+        # Calculate bounding box coordinates for tkinter oval (requires bounding box, not center+radius)
         x1 = x - radius
         y1 = y - radius
         x2 = x + radius
         y2 = y + radius
         
-        # Draw the circle
+        # Draw the circle (filled or outlined based on fill_mode)
         if self.fill_mode:
             self.canvas.create_oval(x1, y1, x2, y2, outline=self.current_color, fill=self.current_color, width=2)
         else:
             self.canvas.create_oval(x1, y1, x2, y2, outline=self.current_color, fill='', width=2)
         
-        # Update pen position
+        # Update pen position to circle center
         if self.pen_down:
             self.pen_x = x
             self.pen_y = y
@@ -117,18 +117,19 @@ class DrawingExecutor:
         width = int(params.get('width', 10))
         height = int(params.get('height', 10))
         
+        # Calculate corner coordinates (x, y is top-left corner)
         x1 = x
         y1 = y
         x2 = x + width
         y2 = y + height
         
-        # Draw the rectangle
+        # Draw the rectangle (filled or outlined based on fill_mode)
         if self.fill_mode:
             self.canvas.create_rectangle(x1, y1, x2, y2, outline=self.current_color, fill=self.current_color, width=2)
         else:
             self.canvas.create_rectangle(x1, y1, x2, y2, outline=self.current_color, fill='', width=2)
         
-        # Update pen position
+        # Update pen position to bottom-right corner
         if self.pen_down:
             self.pen_x = x2
             self.pen_y = y2
@@ -151,10 +152,11 @@ class DrawingExecutor:
         x = int(params.get('x', 0))
         y = int(params.get('y', 0))
         
-        # If pen is down, draw a line to the new position
+        # If pen is down, draw a line from current position to new position
         if self.pen_down:
             self.canvas.create_line(self.pen_x, self.pen_y, x, y, fill=self.current_color, width=2)
         
+        # Update pen position
         self.pen_x = x
         self.pen_y = y
         

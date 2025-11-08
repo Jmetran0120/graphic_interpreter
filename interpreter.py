@@ -29,16 +29,16 @@ class DrawingInterpreter:
     
     def setup_gui(self):
         """Setup the graphical user interface"""
-        # Main container
+        # Main container frame
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Configure grid weights
+        # Configure grid weights for responsive layout
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)  # Canvas column
+        main_frame.columnconfigure(1, weight=1)  # Control panel column
+        main_frame.rowconfigure(1, weight=1)     # Main content row
         
         # Title
         title_label = ttk.Label(
@@ -54,7 +54,7 @@ class DrawingInterpreter:
         canvas_frame.rowconfigure(0, weight=1)
         canvas_frame.columnconfigure(0, weight=1)
         
-        # Create canvas as child of canvas_frame
+        # Create drawing canvas as child of canvas_frame
         self.canvas = tk.Canvas(
             canvas_frame, 
             width=self.canvas_width, 
@@ -66,18 +66,18 @@ class DrawingInterpreter:
         )
         self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Set initial scrollregion to canvas size
+        # Set initial scrollregion to canvas size (allows scrolling if needed)
         self.canvas.config(scrollregion=(0, 0, self.canvas_width, self.canvas_height))
         
-        # Create executor after canvas is set up
+        # Create executor instance after canvas is set up (executor needs canvas reference)
         self.executor = DrawingExecutor(self.canvas, self.canvas_width, self.canvas_height)
         
-        # Right panel: Input and Output
+        # Right panel: Input and Output controls
         control_frame = ttk.Frame(main_frame)
         control_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         control_frame.columnconfigure(0, weight=1)
-        control_frame.rowconfigure(0, weight=2)
-        control_frame.rowconfigure(1, weight=1)
+        control_frame.rowconfigure(0, weight=2)  # Input area takes more space
+        control_frame.rowconfigure(1, weight=1)  # Output area
         
         # Input area
         input_frame = ttk.LabelFrame(control_frame, text="Command Input", padding="5")
@@ -148,10 +148,10 @@ class DrawingInterpreter:
         )
         help_label.grid(row=2, column=0, columnspan=2, pady=(10, 0))
         
-        # Bind Enter key to execute (Ctrl+Enter for multiline)
+        # Bind Ctrl+Enter to execute commands (allows multiline input)
         self.input_text.bind('<Control-Return>', lambda e: self.execute_commands())
         
-        # Add example commands
+        # Pre-populate input area with example commands
         self.load_example_commands()
     
     def load_example_commands(self):
@@ -197,14 +197,14 @@ draw rectangle 500 400 150 100
     
     def execute_commands(self):
         """Execute commands from the input area"""
-        # Get input text
+        # Get input text from text widget
         input_text = self.input_text.get('1.0', tk.END).strip()
         
         if not input_text:
             self.append_output("No commands to execute")
             return
         
-        # Clear previous output
+        # Clear previous output messages
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete('1.0', tk.END)
         self.output_text.config(state=tk.DISABLED)
@@ -214,25 +214,25 @@ draw rectangle 500 400 150 100
         self.append_output("=" * 50)
         
         try:
-            # Tokenize
+            # Step 1: Tokenize input text into tokens
             lexer = Lexer(input_text)
             tokens = lexer.tokenize()
             
-            # Filter out EOF tokens
+            # Filter out EOF tokens (not needed for parsing)
             tokens = [t for t in tokens if t.type != TokenType.EOF]
             
             if not tokens:
                 self.append_output("No valid tokens found")
                 return
             
-            # Parse
+            # Step 2: Parse tokens into command structures
             parser = Parser(tokens)
             commands = parser.parse()
             
             self.append_output(f"Parsed {len(commands)} command(s)")
             self.append_output("-" * 50)
             
-            # Execute each command
+            # Step 3: Execute each command sequentially
             for i, command in enumerate(commands, 1):
                 try:
                     result = self.executor.execute(command)
@@ -242,7 +242,7 @@ draw rectangle 500 400 150 100
                     self.append_output(error_msg)
                     messagebox.showerror("Execution Error", error_msg)
             
-            # Update scrollregion and force canvas refresh after all commands
+            # Update canvas scrollregion to fit all drawn items (with padding)
             try:
                 bbox = self.canvas.bbox("all")
                 if bbox:
@@ -250,6 +250,7 @@ draw rectangle 500 400 150 100
                     self.canvas.config(scrollregion=(bbox[0]-10, bbox[1]-10, bbox[2]+10, bbox[3]+10))
             except:
                 pass
+            # Force GUI update to display changes
             self.canvas.update_idletasks()
             self.root.update()
             
@@ -257,6 +258,7 @@ draw rectangle 500 400 150 100
             self.append_output("Execution complete!")
             
         except Exception as e:
+            # Handle errors during tokenization or parsing
             error_msg = f"Error: {str(e)}"
             self.append_output(error_msg)
             messagebox.showerror("Interpreter Error", error_msg)

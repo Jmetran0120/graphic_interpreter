@@ -85,14 +85,14 @@ class Parser:
         line = self.current_token.line
         col = self.current_token.col
         
-        # Commands start with a keyword
+        # Commands must start with a keyword
         if self.current_token.type != TokenType.KEYWORD:
             raise self.error(f"Expected command keyword, got {self.current_token.type.name}")
         
         keyword = self.current_token.value
         self.advance()
         
-        # Parse different command types
+        # Route to appropriate parser based on command keyword
         if keyword == 'draw':
             return self.parse_draw_command(line, col)
         elif keyword == 'set':
@@ -127,7 +127,7 @@ class Parser:
         """Parse: draw line x1 y1 x2 y2"""
         params = {}
         
-        # Try to parse coordinates
+        # Parse four coordinate values (start point and end point)
         try:
             params['x1'] = self.parse_number()
             params['y1'] = self.parse_number()
@@ -145,6 +145,7 @@ class Parser:
         """Parse: draw circle x y radius"""
         params = {}
         
+        # Parse center coordinates and radius
         try:
             params['x'] = self.parse_number()
             params['y'] = self.parse_number()
@@ -161,6 +162,7 @@ class Parser:
         """Parse: draw rectangle x y width height"""
         params = {}
         
+        # Parse top-left corner coordinates and dimensions
         try:
             params['x'] = self.parse_number()
             params['y'] = self.parse_number()
@@ -176,11 +178,13 @@ class Parser:
     
     def parse_set_command(self, line: int, col: int) -> Command:
         """Parse: set color <color_name>"""
+        # Verify 'color' keyword follows 'set'
         if self.current_token is None or self.current_token.value != 'color':
             raise self.error("Expected 'color' after 'set'")
         
         self.advance()
         
+        # Accept either COLOR token or STRING token for color name
         if self.current_token is None or self.current_token.type not in (TokenType.COLOR, TokenType.STRING):
             raise self.error("Expected color name after 'set color'")
         
@@ -203,6 +207,7 @@ class Parser:
         """Parse: move x y"""
         params = {}
         
+        # Parse destination coordinates
         try:
             params['x'] = self.parse_number()
             params['y'] = self.parse_number()
@@ -237,13 +242,14 @@ class Parser:
         """Parse all tokens into a list of commands"""
         commands = []
         
+        # Parse commands until end of input
         while self.current_token is not None and self.current_token.type != TokenType.EOF:
             try:
                 command = self.parse_command()
                 commands.append(command)
             except Exception as e:
-                # If we hit an error, try to recover by skipping to next command
-                # For now, just raise the error
+                # On error, stop parsing and propagate the error
+                # (Could be extended with error recovery in the future)
                 raise e
         
         return commands

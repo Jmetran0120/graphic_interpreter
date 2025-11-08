@@ -94,12 +94,13 @@ class Lexer:
     def read_number(self) -> str:
         """Read a number (integer or float)"""
         result = ''
-        dot_count = 0
+        dot_count = 0  # Track decimal points to prevent multiple dots
         
+        # Read digits and at most one decimal point
         while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
             if self.current_char == '.':
                 dot_count += 1
-                if dot_count > 1:
+                if dot_count > 1:  # Stop if we encounter a second dot
                     break
             result += self.current_char
             self.advance()
@@ -111,18 +112,19 @@ class Lexer:
         result = ''
         self.advance()  # Skip opening quote
         
+        # Read characters until closing quote, handling escape sequences
         while self.current_char is not None and self.current_char != '"':
             if self.current_char == '\\':
+                # Handle escape sequences (\n, \t, etc.)
                 self.advance()
                 if self.current_char is None:
                     raise self.error("Unterminated string")
-                # Handle escape sequences
                 if self.current_char == 'n':
                     result += '\n'
                 elif self.current_char == 't':
                     result += '\t'
                 else:
-                    result += self.current_char
+                    result += self.current_char  # Include escaped character as-is
             else:
                 result += self.current_char
             self.advance()
@@ -154,7 +156,7 @@ class Lexer:
                 self.skip_comment()
                 continue
             
-            # Numbers
+            # Numbers (check for digit or decimal point followed by digit)
             if self.current_char.isdigit() or (self.current_char == '.' and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit()):
                 col = self.col
                 num_str = self.read_number()
@@ -166,20 +168,20 @@ class Lexer:
                 str_val = self.read_string()
                 return Token(TokenType.STRING, str_val, self.line, col)
             
-            # Identifiers and keywords
+            # Identifiers and keywords (start with letter or underscore)
             if self.current_char.isalpha() or self.current_char == '_':
                 col = self.col
                 identifier = self.read_identifier()
                 
-                # Check if it's a keyword
+                # Check if it's a reserved keyword first
                 if identifier.lower() in self.KEYWORDS:
                     return Token(TokenType.KEYWORD, identifier.lower(), self.line, col)
                 
-                # Check if it's a color
+                # Check if it's a recognized color name
                 if identifier.lower() in self.COLORS:
                     return Token(TokenType.COLOR, identifier.lower(), self.line, col)
                 
-                # Regular identifier
+                # Fallback: treat as keyword (for unknown identifiers)
                 return Token(TokenType.KEYWORD, identifier.lower(), self.line, col)
             
             # Special characters
